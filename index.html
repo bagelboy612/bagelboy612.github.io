@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Advent Beer 2025 B</title>
+
+  <style>
+    /* Destination dimensions adjusted to hold 8 balls (4x2 grid) */
+.destination {
+  position: absolute;
+  /* (4 balls * 30px width) + (5 spaces * 5px spacing) approx */
+  width: 170px; 
+  /* (2 rows * 30px height) + (3 spaces * 5px spacing) approx */
+  height: 85px; 
+  border: 2px solid green;
+  border-radius: 5px; /* Change to square/rectangle */
+  padding-top: 5px;   /* Add padding for text */
+  text-align: center;
+  font-weight: bold;
+  line-height: normal;
+  font-size: 14px;
+}
+
+/* CSS for the button */
+#start-button {
+  margin-bottom: 20px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.tank {
+  position: absolute;
+  margin-left: 75px;
+  margin-top: 0px;
+  height: 200px;
+  width: 200px;
+  border-radius: 50%;
+  border: solid;
+  display: inline-block;
+}
+
+/* Update the ball style for better appearance and centering control */
+.ball {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background-color: transparent; /* Make the ball content area clear */
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  
+  /* Use a pseudo-element for the colored circle background */
+  transition: all 1s ease-in-out; 
+  z-index: 10;
+}
+
+/* Add the actual circle appearance behind the number */
+.ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: green; /* Initial color */
+    border-radius: 50%;
+    z-index: -1; /* Place it behind the number */
+    transition: background-color 1s;
+}
+
+/* Style for when the ball lands at its destination */
+.ball.landed::before {
+    background-color: red; /* Change color on landing */
+}
+
+.pic {
+  position: absolute;
+  height: 250px;
+  width: 250px;
+  margin-left: 30%;
+  margin-top: 5%;
+}
+
+#geigers { top: 350px; left: 50px; }
+#kandlers { top: 350px; left: 300px; } /* Shifted positions */
+#maglios { top: 350px; left: 550px; }
+  </style>
+
+  
+</head>
+<body>
+  <button id="start-button">Press to Pick</button>
+<img src="https://i.ibb.co/fdKwtQQh/Gemini-Generated-Image-5lf1mz5lf1mz5lf1.png" alt="advent graphic" class='pic' border="0" id='pic'>
+<div id="lottery-container">
+  <div id="starting-bin">...</div>
+  <span id="tank" class="tank"></span>
+  <div id="geigers" class="destination">Chris & Karla</div>
+  <div id="kandlers" class="destination">Brit & Nik</div>
+  <div id="maglios" class="destination">Zach & Tessa</div>
+</div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+  const startButton = document.getElementById('start-button');
+  const startingBin = document.getElementById('starting-bin');
+  
+  // --- 1. Define the Fixed Assignment List ---
+  // Ball 1 = G, Ball 2 = K, Ball 3 = G, etc.
+  const ASSIGNMENT_ORDER = [
+    'G', 'K', 'G', 'M', 'G', 'K', 'M', 'G', 
+    'M', 'K', 'G', 'K', 'M', 'K', 'G', 'K', 
+    'M', 'G', 'M', 'K', 'G', 'M', 'K', 'M'
+  ];
+  const totalBalls = ASSIGNMENT_ORDER.length; 
+
+  // --- 2. Define Destinations & Lookup Map ---
+  const destinations = {
+    'G': document.getElementById('geigers'),
+    'K': document.getElementById('kandlers'),
+    'M': document.getElementById('maglios')
+  };
+
+  // --- Grid Constants ---
+  const MAX_COLS = 4;
+  const BALL_SIZE = 30;
+  const SPACING = 5;         
+  const UNIT_SIZE = BALL_SIZE + SPACING; // 35px
+
+  // --- Track the number of balls landed in each destination ---
+  // Reset for each run, used for grid placement
+  const destinationCounts = { 'G': 0, 'K': 0, 'M': 0 }; 
+
+  // --- A. Create and place balls in the starting bin ---
+  const balls = [];
+  for (let i = 1; i <= totalBalls; i++) {
+    const ball = document.createElement('div');
+    ball.classList.add('ball');
+    ball.textContent = i;
+    ball.id = `ball-${i}`;
+    
+    // Initial random placement inside the bin (this is the only non-deterministic part, 
+    // but it only affects the initial layout, not the final destination or order)
+    const x = Math.random() * 110 + 120;
+    const y = Math.random() * 110 + 120;
+    ball.style.top = `${y}px`;
+    ball.style.left = `${x}px`;
+    startingBin.appendChild(ball);
+    balls.push(ball); 
+  }
+
+  // --- B. Function to start the deterministic animation ---
+  function startAnimation() {
+    let delay = 0;
+
+    // Iterate 24 times, where 'i' corresponds to the ball index (0-23)
+    for (let i = 0; i < totalBalls; i++) {
+      
+      // The current ball element (Ball 1 is at index 0, Ball 2 at index 1, etc.)
+      const ball = balls[i]; 
+      
+      // --- Deterministic Assignment ---
+      const assignmentLetter = ASSIGNMENT_ORDER[i];
+      // --- End Deterministic Assignment ---
+
+      const target = destinations[assignmentLetter];
+      const count = destinationCounts[assignmentLetter]; 
+
+      // Get target's position relative to the main container
+      const targetRect = target.getBoundingClientRect();
+      const containerRect = document.getElementById('lottery-container').getBoundingClientRect();
+
+      // --- GRID CALCULATIONS (Same logic as before for 4x2 layout) ---
+      const col = count % MAX_COLS; 
+      const row = Math.floor(count / MAX_COLS); 
+
+      // Calculate the final X position (based on column)
+      const targetLeft = targetRect.left - containerRect.left;
+      const finalX = targetLeft + (col * UNIT_SIZE) + SPACING + 22;
+
+      // Calculate the final Y position (based on row)
+      const targetTop = targetRect.top - containerRect.top;
+      const verticalOffset = 30; // Push down past the destination's name text
+      const finalY = targetTop + (row * UNIT_SIZE) + verticalOffset + 67;
+
+      // ----------------------------------------------------
+
+      // Increment the count for the next ball landing here (must happen BEFORE the delay)
+      destinationCounts[assignmentLetter]++;
+
+      // Delay each ball's jump
+      setTimeout(() => {
+        ball.style.transition = 'top 1s, left 1s';
+        ball.style.position = 'absolute';
+        ball.style.top = `${finalY}px`;
+        ball.style.left = `${finalX}px`;
+        ball.classList.add('landed'); // Apply the purple background style
+      }, delay);
+
+      delay += 150; // Staggered release time for the next ball
+    }
+    document.getElementById('start-button').hidden = true;
+    document.getElementById("tank").style.marginTop = "62px";
+    document.getElementById("pic").style.marginLeft = "47.05%";
+    b.hidden = !b.hidden
+
+  }
+
+  // Start the animation after a short pause
+  // setTimeout(startAnimation, 1000); 
+
+  // --- 4. Event Listener for Start/Restart ---
+    startButton.addEventListener('click', startAnimation);
+});
+  </script>
+</body>
+</html>
