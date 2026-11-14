@@ -6,6 +6,7 @@
     <title>Geiger Family Beer Advent Calendar</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="android-chrome-512x512.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
@@ -41,6 +42,16 @@
             will-change: left, top, transform;
         }
 
+        /* Docked state when ball settles inside a destination 4x2 grid slot */
+        .ball.docked {
+            position: relative !important;
+            left: auto !important;
+            top: auto !important;
+            transform: scale(1) !important;
+            z-index: 20 !important;
+            margin: 0 auto;
+        }
+
         /* Specular gloss dot for extra 3D depth */
         .ball::after {
             content: '';
@@ -63,6 +74,29 @@
         }
         .ball.landed-M {
             background: radial-gradient(circle at 30% 28%, #f9a8d4 0%, #db2777 40%, #9d174d 100%);
+        }
+
+        /* Hopper Wrapper for smooth collapse/expand transition */
+        #hopper-wrapper {
+            max-height: 240px;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            transition:
+                max-height 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.45s ease,
+                transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                margin 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+            overflow: visible;
+        }
+
+        #hopper-wrapper.hopper-hidden {
+            max-height: 0 !important;
+            opacity: 0 !important;
+            transform: translateY(-16px) scale(0.96);
+            margin-top: -1rem;
+            margin-bottom: -1rem;
+            pointer-events: none;
+            overflow: hidden;
         }
 
         /* Hopper Glass Container styling */
@@ -103,6 +137,7 @@
 
         /* Destination Slot Placeholder */
         .slot-cell {
+            position: relative;
             width: 34px;
             height: 34px;
             border-radius: 50%;
@@ -116,11 +151,29 @@
             color: rgba(255, 255, 255, 0.22);
         }
 
+        .slot-cell.slot-occupied {
+            border-color: transparent;
+            background: transparent;
+        }
+
+        .slot-cell .slot-num {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .slot-cell.slot-occupied .slot-num {
+            display: none;
+        }
+
         /* Keep destination cards on a low stacking layer without trapping children */
         .destination-card {
             position: relative;
-            z-index: 1;
-            background: rgba(2, 6, 23, 0.72);
+            z-index: 10;
+            background: rgba(2, 6, 23, 0.78);
         }
     </style>
 </head>
@@ -128,32 +181,31 @@
 
     <!-- App Header -->
     <header class="w-full max-w-4xl text-center mb-3 sm:mb-4">
-        <div class="inline-block px-3 py-1 mb-1.5 text-[11px] font-semibold tracking-wider text-indigo-300 uppercase bg-indigo-950/60 rounded-full border border-indigo-500/30">
+        <div class="inline-block px-3 py-1 mb-1.5 text-[11px] font-semibold tracking-wider text-amber-300 uppercase bg-amber-950/50 rounded-full border border-amber-500/30">
             24 Beers to Compliment the Christmas Cheer
         </div>
-        <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-white to-pink-200">
-            Geiger Family<br>
-            Beer Advent Calendar
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-white to-pink-200">
+            Geiger Family<br>2026 Beer Advent Calendar
         </h1>
         <p class="text-xs sm:text-sm text-slate-400 mt-1">Post pictures of your beers in the Geiger+ family chat for a chance to win a year supply of your kids making fun of you.</p>
     </header>
 
-    <!-- Main App Container (Positioning context for all 24 balls so z-index works cleanly) -->
+    <!-- Main App Container (Positioning context for in-flight balls) -->
     <main id="app-container" class="w-full max-w-4xl flex flex-col gap-4 sm:gap-6 relative">
 
-        <!-- Top-level Ball Layer strictly above cards & hopper glass -->
+        <!-- Top-level Ball Layer strictly above cards & hopper glass while in flight -->
         <div id="balls-layer" class="absolute inset-0 pointer-events-none z-[100]"></div>
 
         <!-- Control Panel -->
-        <div class="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl">
+        <div class="relative z-20 flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl">
             
-            <!-- Mode Selector Switch -->
+            <!-- Mode Selector Switch (Dramatic Hopper is Default) -->
             <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 w-full sm:w-auto">
-                <button id="mode-fast" onclick="setMode('fast')" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-indigo-600 text-white shadow-md">
-                    ⚡ Fast Mode
+                <button id="mode-dramatic" onclick="setMode('dramatic')" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-pink-600 text-white shadow-md">
+                    🌪️ Dramatic Mode
                 </button>
-                <button id="mode-dramatic" onclick="setMode('dramatic')" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
-                    🌪️ Dramatic Hopper
+                <button id="mode-fast" onclick="setMode('fast')" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+                    ⚡ Fast Mode
                 </button>
             </div>
 
@@ -164,65 +216,85 @@
             </button>
         </div>
 
-        <!-- Hopper Starting Bin (Glass Globe) -->
-        <div class="relative z-10 w-full h-44 sm:h-52 hopper-glass rounded-3xl flex items-center justify-center p-4">
-            <div class="absolute top-3 left-4 text-[11px] font-semibold tracking-wider text-slate-300 uppercase flex items-center gap-1.5 z-20">
-                <span id="hopper-indicator" class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                <span id="hopper-status">Hopper Ready (24 Balls)</span>
+        <!-- Collapsible Hopper Starting Bin (Glass Globe) -->
+        <div id="hopper-wrapper" class="relative z-10 w-full">
+            <div class="relative w-full h-44 sm:h-52 hopper-glass rounded-3xl flex items-center justify-center p-4">
+                <div class="absolute top-3 left-4 text-[11px] font-semibold tracking-wider text-slate-300 uppercase flex items-center gap-1.5 z-20">
+                    <span id="hopper-indicator" class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                    <span id="hopper-status">Hopper Ready (24 Balls)</span>
+                </div>
+
+                <!-- Current Pick Callout Badge -->
+                <div id="current-pick-badge" class="hidden absolute top-2.5 right-3 sm:right-4 px-3 py-1 rounded-full bg-slate-900/90 border border-amber-400/40 text-xs font-bold text-white shadow-md z-20 flex items-center gap-1.5">
+                    <span class="text-slate-400 font-medium">Current Pick:</span>
+                    <span id="current-pick-text" class="text-amber-300">#1 → Geigers</span>
+                </div>
+
+                <!-- Inner bounds reference where balls bounce/scatter -->
+                <div id="hopper-bin" class="relative w-full h-full max-w-lg mx-auto mt-3"></div>
+
+                <!-- Subtle glass dome sheen on top -->
+                <div class="hopper-sheen absolute inset-0 rounded-3xl"></div>
             </div>
-
-            <!-- Current Pick Callout Badge (for Dramatic & Active draws) -->
-            <div id="current-pick-badge" class="hidden absolute top-2.5 right-3 sm:right-4 px-3 py-1 rounded-full bg-slate-900/90 border border-indigo-400/40 text-xs font-bold text-white shadow-md z-20 flex items-center gap-1.5">
-                <span class="text-slate-400 font-medium">Current Pick:</span>
-                <span id="current-pick-text" class="text-amber-300">#1 → Chris & Karla</span>
-            </div>
-
-            <!-- Inner bounds reference where balls bounce/scatter -->
-            <div id="hopper-bin" class="relative w-full h-full max-w-lg mx-auto mt-3"></div>
-
-            <!-- Subtle glass dome sheen on top -->
-            <div class="hopper-sheen absolute inset-0 rounded-3xl"></div>
         </div>
 
         <!-- Destinations Section (Geigers, Kandlers, Maglios) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
             
             <!-- Geigers Destination -->
-            <div class="destination-card border border-sky-500/25 rounded-2xl p-3.5 sm:p-4 flex flex-col shadow-lg">
+            <div class="destination-card border border-sky-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col shadow-lg">
                 <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-800/80">
                     <span class="font-bold text-sm text-sky-400">Chris & Karla</span>
                     <span id="count-G" class="text-xs bg-sky-950 text-sky-300 px-2 py-0.5 rounded-full font-mono border border-sky-800/50">0 / 8</span>
                 </div>
                 <!-- 4x2 Grid Slots -->
-                <div id="grid-geigers" class="grid grid-cols-4 gap-2 relative min-h-[78px] p-1 items-center justify-items-center">
-                    <div class="slot-cell">1</div><div class="slot-cell">2</div><div class="slot-cell">3</div><div class="slot-cell">4</div>
-                    <div class="slot-cell">5</div><div class="slot-cell">6</div><div class="slot-cell">7</div><div class="slot-cell">8</div>
+                <div id="grid-geigers" class="grid grid-cols-4 grid-rows-2 gap-2 relative min-h-[78px] p-1 items-center justify-items-center">
+                    <div class="slot-cell" data-slot="0"><span class="slot-num">1</span></div>
+                    <div class="slot-cell" data-slot="1"><span class="slot-num">2</span></div>
+                    <div class="slot-cell" data-slot="2"><span class="slot-num">3</span></div>
+                    <div class="slot-cell" data-slot="3"><span class="slot-num">4</span></div>
+                    <div class="slot-cell" data-slot="4"><span class="slot-num">5</span></div>
+                    <div class="slot-cell" data-slot="5"><span class="slot-num">6</span></div>
+                    <div class="slot-cell" data-slot="6"><span class="slot-num">7</span></div>
+                    <div class="slot-cell" data-slot="7"><span class="slot-num">8</span></div>
                 </div>
             </div>
 
             <!-- Kandlers Destination -->
-            <div class="destination-card border border-emerald-500/25 rounded-2xl p-3.5 sm:p-4 flex flex-col shadow-lg">
+            <div class="destination-card border border-emerald-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col shadow-lg">
                 <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-800/80">
                     <span class="font-bold text-sm text-emerald-400">Brit & Nik</span>
                     <span id="count-K" class="text-xs bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded-full font-mono border border-emerald-800/50">0 / 8</span>
                 </div>
                 <!-- 4x2 Grid Slots -->
-                <div id="grid-kandlers" class="grid grid-cols-4 gap-2 relative min-h-[78px] p-1 items-center justify-items-center">
-                    <div class="slot-cell">1</div><div class="slot-cell">2</div><div class="slot-cell">3</div><div class="slot-cell">4</div>
-                    <div class="slot-cell">5</div><div class="slot-cell">6</div><div class="slot-cell">7</div><div class="slot-cell">8</div>
+                <div id="grid-kandlers" class="grid grid-cols-4 grid-rows-2 gap-2 relative min-h-[78px] p-1 items-center justify-items-center">
+                    <div class="slot-cell" data-slot="0"><span class="slot-num">1</span></div>
+                    <div class="slot-cell" data-slot="1"><span class="slot-num">2</span></div>
+                    <div class="slot-cell" data-slot="2"><span class="slot-num">3</span></div>
+                    <div class="slot-cell" data-slot="3"><span class="slot-num">4</span></div>
+                    <div class="slot-cell" data-slot="4"><span class="slot-num">5</span></div>
+                    <div class="slot-cell" data-slot="5"><span class="slot-num">6</span></div>
+                    <div class="slot-cell" data-slot="6"><span class="slot-num">7</span></div>
+                    <div class="slot-cell" data-slot="7"><span class="slot-num">8</span></div>
                 </div>
             </div>
 
             <!-- Maglios Destination -->
-            <div class="destination-card border border-pink-500/25 rounded-2xl p-3.5 sm:p-4 flex flex-col shadow-lg">
+            <div class="destination-card border border-pink-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col shadow-lg">
                 <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-800/80">
                     <span class="font-bold text-sm text-pink-400">Zach & Tessa</span>
                     <span id="count-M" class="text-xs bg-pink-950 text-pink-300 px-2 py-0.5 rounded-full font-mono border border-pink-800/50">0 / 8</span>
                 </div>
                 <!-- 4x2 Grid Slots -->
-                <div id="grid-maglios" class="grid grid-cols-4 gap-2 relative min-h-[78px] p-1 items-center justify-items-center">
-                    <div class="slot-cell">1</div><div class="slot-cell">2</div><div class="slot-cell">3</div><div class="slot-cell">4</div>
-                    <div class="slot-cell">5</div><div class="slot-cell">6</div><div class="slot-cell">7</div><div class="slot-cell">8</div>
+                <div id="grid-maglios" class="grid grid-cols-4 grid-rows-2 gap-2 relative min-h-[78px] p-1 items-center justify-items-center">
+                    <div class="slot-cell" data-slot="0"><span class="slot-num">1</span></div>
+                    <div class="slot-cell" data-slot="1"><span class="slot-num">2</span></div>
+                    <div class="slot-cell" data-slot="2"><span class="slot-num">3</span></div>
+                    <div class="slot-cell" data-slot="3"><span class="slot-num">4</span></div>
+                    <div class="slot-cell" data-slot="4"><span class="slot-num">5</span></div>
+                    <div class="slot-cell" data-slot="5"><span class="slot-num">6</span></div>
+                    <div class="slot-cell" data-slot="6"><span class="slot-num">7</span></div>
+                    <div class="slot-cell" data-slot="7"><span class="slot-num">8</span></div>
                 </div>
             </div>
 
@@ -243,8 +315,8 @@
         const TOTAL_BALLS = ASSIGNMENT_ORDER.length; // 24
         const BALL_SIZE = 34;
 
-        let currentMode = 'fast'; // 'fast' or 'dramatic'
-        let drawState = 'idle';   // 'idle' | 'drawing' | 'completed'
+        let currentMode = 'dramatic'; // Default mode: 'dramatic' or 'fast'
+        let drawState = 'idle';       // 'idle' | 'drawing' | 'completed'
         let balls = [];
 
         // Active timer & animation registries so Reset cancels 100% of pending activity
@@ -307,18 +379,48 @@
             }
         }
 
-        // Initialize or Reset Hopper and Balls cleanly
-        function resetAndInitHopper() {
+        // Helper to scatter balls inside the hopper bounds
+        function scatterBallsInHopper() {
+            const containerRect = document.getElementById('app-container').getBoundingClientRect();
+            const hopperRect = document.getElementById('hopper-bin').getBoundingClientRect();
+
+            const offsetLeft = hopperRect.left - containerRect.left;
+            const offsetTop = hopperRect.top - containerRect.top;
+            const maxX = Math.max(24, hopperRect.width - BALL_SIZE - 12);
+            const maxY = Math.max(24, hopperRect.height - BALL_SIZE - 12);
+
+            balls.forEach(ballObj => {
+                if (!ballObj.landed) {
+                    const rx = offsetLeft + 6 + Math.random() * maxX;
+                    const ry = offsetTop + 6 + Math.random() * maxY;
+                    ballObj.element.style.left = `${rx}px`;
+                    ballObj.element.style.top = `${ry}px`;
+                }
+            });
+        }
+
+        // Initialize or Reset Hopper and Balls cleanly (undocking any landed balls)
+        function resetAndInitHopper(mixBriefly = false) {
             clearAllTimers();
             drawState = 'idle';
             updateActionButton('idle');
 
-            const ballsLayer = document.getElementById('balls-layer');
-            const hopperBin = document.getElementById('hopper-bin');
-            const containerRect = document.getElementById('app-container').getBoundingClientRect();
-            const hopperRect = hopperBin.getBoundingClientRect();
+            const hopperWrapper = document.getElementById('hopper-wrapper');
+            const wasHidden = hopperWrapper.classList.contains('hopper-hidden');
 
-            // Clear all existing ball elements completely
+            // Unhide hopper smoothly
+            hopperWrapper.classList.remove('hopper-hidden');
+
+            const ballsLayer = document.getElementById('balls-layer');
+
+            // Clear any docked balls inside destination slots & reset slot visuals
+            document.querySelectorAll('.slot-cell').forEach(slot => {
+                slot.classList.remove('slot-occupied');
+                const dockedBall = slot.querySelector('.ball');
+                if (dockedBall) dockedBall.remove();
+            });
+
+            // Clear all in-flight ball elements completely
             ballsLayer.innerHTML = '';
             balls = [];
 
@@ -329,24 +431,12 @@
             document.getElementById('hopper-status').textContent = 'Hopper Ready (24 Balls)';
             document.getElementById('current-pick-badge').classList.add('hidden');
 
-            // Hopper coordinates relative to #app-container
-            const offsetLeft = hopperRect.left - containerRect.left;
-            const offsetTop = hopperRect.top - containerRect.top;
-            const maxX = Math.max(20, hopperRect.width - BALL_SIZE - 12);
-            const maxY = Math.max(20, hopperRect.height - BALL_SIZE - 12);
-
+            // Create fresh 24 balls inside #balls-layer
             for (let i = 1; i <= TOTAL_BALLS; i++) {
                 const ball = document.createElement('div');
                 ball.className = 'ball';
                 ball.textContent = i;
                 ball.id = `ball-${i}`;
-
-                // Scatter inside hopper bounds
-                const rx = offsetLeft + 6 + Math.random() * maxX;
-                const ry = offsetTop + 6 + Math.random() * maxY;
-
-                ball.style.left = `${rx}px`;
-                ball.style.top = `${ry}px`;
 
                 ballsLayer.appendChild(ball);
                 balls.push({
@@ -357,6 +447,33 @@
                     slotIndex: null
                 });
             }
+
+            // Scatter immediately, and re-scatter once hopper expand animation settles if it was hidden
+            scatterBallsInHopper();
+            if (wasHidden) {
+                registerTimeout(() => {
+                    if (drawState === 'idle') {
+                        scatterBallsInHopper();
+                    }
+                }, 320);
+            }
+
+            // Give the balls a lively mix swirl inside the unhidden hopper on reset
+            if (mixBriefly) {
+                document.getElementById('hopper-status').textContent = 'Mixing Balls...';
+                balls.forEach((ballObj, idx) => {
+                    ballObj.element.classList.add(idx % 2 === 0 ? 'tumbling-1' : 'tumbling-2');
+                });
+                registerTimeout(() => {
+                    if (drawState === 'idle') {
+                        balls.forEach(ballObj => {
+                            ballObj.element.classList.remove('tumbling-1', 'tumbling-2');
+                        });
+                        scatterBallsInHopper();
+                        document.getElementById('hopper-status').textContent = 'Hopper Ready (24 Balls)';
+                    }
+                }, 900);
+            }
         }
 
         // Handle Start / Reset Button Click
@@ -364,8 +481,8 @@
             if (drawState === 'idle') {
                 startDraw();
             } else {
-                // Works identically during active draw or after Fast/Dramatic Mode finishes
-                resetAndInitHopper();
+                // Unhides hopper, undocks balls from destination cards, and mixes them back in the hopper
+                resetAndInitHopper(true);
             }
         }
 
@@ -375,6 +492,9 @@
             drawState = 'drawing';
             updateActionButton('drawing');
 
+            // Ensure any brief reset-swirl classes are cleared before starting
+            balls.forEach(b => b.element.classList.remove('tumbling-1', 'tumbling-2'));
+
             if (currentMode === 'fast') {
                 runFastMode();
             } else {
@@ -382,38 +502,51 @@
             }
         }
 
-        // Animate a single ball along a parabolic arc from current position to destination slot
+        // Complete draw & collapse hopper smoothly while docked balls ride up inside destination cards
+        function finishDrawAndHideHopper() {
+            if (drawState !== 'drawing') return;
+            drawState = 'completed';
+            document.getElementById('hopper-status').textContent = 'Draw Complete!';
+
+            registerTimeout(() => {
+                if (drawState === 'completed') {
+                    document.getElementById('hopper-wrapper').classList.add('hopper-hidden');
+                }
+            }, 450);
+        }
+
+        // Animate a single ball along a parabolic arc, then dock it inside the target destination slot
         function flyBallToSlot(ballObj, destKey, slotIndex, durationMs) {
             const containerRect = document.getElementById('app-container').getBoundingClientRect();
             const gridId = destKey === 'G' ? 'grid-geigers' : destKey === 'K' ? 'grid-kandlers' : 'grid-maglios';
-            const slots = document.getElementById(gridId).getElementsByClassName('slot-cell');
-            const targetSlot = slots[slotIndex];
+            const targetSlot = document.getElementById(gridId).querySelector(`.slot-cell[data-slot="${slotIndex}"]`);
             const slotRect = targetSlot.getBoundingClientRect();
 
             const startX = parseFloat(ballObj.element.style.left) || 0;
             const startY = parseFloat(ballObj.element.style.top) || 0;
-            const targetX = slotRect.left - containerRect.left + (slotRect.width - BALL_SIZE) / 2;
-            const targetY = slotRect.top - containerRect.top + (slotRect.height - BALL_SIZE) / 2;
-
-            // Arc height peaks above the highest point of the path
-            const arcPeak = Math.min(startY, targetY) - 65;
-            const startTime = performance.now();
 
             ballObj.landed = true;
             ballObj.slotIndex = slotIndex;
             ballObj.element.classList.add(`landed-${destKey}`);
             ballObj.element.style.zIndex = 120 + ballObj.number;
 
+            const startTime = performance.now();
+
             function step(now) {
                 if (drawState === 'idle') return; // Abort immediately on reset
 
+                // Continuously read live slot coordinates in case of viewport shifts during flight
+                const liveContainerRect = document.getElementById('app-container').getBoundingClientRect();
+                const liveSlotRect = targetSlot.getBoundingClientRect();
+                const targetX = liveSlotRect.left - liveContainerRect.left + (liveSlotRect.width - BALL_SIZE) / 2;
+                const targetY = liveSlotRect.top - liveContainerRect.top + (liveSlotRect.height - BALL_SIZE) / 2;
+                const arcPeak = Math.min(startY, targetY) - 65;
+
                 const elapsed = now - startTime;
                 const t = Math.min(1, elapsed / durationMs);
-                // Smooth ease-out cubic
                 const ease = 1 - Math.pow(1 - t, 3);
 
                 const currentX = startX + (targetX - startX) * ease;
-                // Quadratic Bezier curve for parabolic jump arc
                 const currentY = (1 - ease) * (1 - ease) * startY + 2 * (1 - ease) * ease * arcPeak + ease * ease * targetY;
                 const scale = 1 + Math.sin(t * Math.PI) * 0.25;
 
@@ -425,10 +558,14 @@
                     const rafId = requestAnimationFrame(step);
                     activeRAFs.push(rafId);
                 } else {
-                    ballObj.element.style.left = `${targetX}px`;
-                    ballObj.element.style.top = `${targetY}px`;
-                    ballObj.element.style.transform = 'scale(1)';
-                    ballObj.element.style.zIndex = 100;
+                    // Dock ball directly inside the destination slot so it moves seamlessly with the card!
+                    ballObj.element.style.left = '';
+                    ballObj.element.style.top = '';
+                    ballObj.element.style.transform = '';
+                    ballObj.element.style.zIndex = '';
+                    ballObj.element.classList.add('docked');
+                    targetSlot.classList.add('slot-occupied');
+                    targetSlot.appendChild(ballObj.element);
                 }
             }
 
@@ -453,12 +590,7 @@
                     flyBallToSlot(ballObj, destKey, slotIndex, 550);
 
                     if (index === TOTAL_BALLS - 1) {
-                        registerTimeout(() => {
-                            if (drawState === 'drawing') {
-                                drawState = 'completed';
-                                document.getElementById('hopper-status').textContent = 'Draw Complete!';
-                            }
-                        }, 580);
+                        registerTimeout(finishDrawAndHideHopper, 600);
                     }
                 }, index * 130);
             });
@@ -489,13 +621,8 @@
                     if (drawState !== 'drawing') return;
 
                     if (currentIndex >= TOTAL_BALLS) {
-                        registerTimeout(() => {
-                            if (drawState === 'drawing') {
-                                drawState = 'completed';
-                                document.getElementById('hopper-status').textContent = 'Draw Complete!';
-                                pickText.textContent = 'All 24 Placed!';
-                            }
-                        }, 700);
+                        pickText.textContent = 'All 24 Placed!';
+                        registerTimeout(finishDrawAndHideHopper, 750);
                         return;
                     }
 
@@ -520,41 +647,14 @@
             }, 2400);
         }
 
-        // Recalculate ball positions cleanly on mobile/desktop viewport resize
-        function repositionBallsOnResize() {
-            const containerRect = document.getElementById('app-container').getBoundingClientRect();
-            const hopperRect = document.getElementById('hopper-bin').getBoundingClientRect();
-
-            const offsetLeft = hopperRect.left - containerRect.left;
-            const offsetTop = hopperRect.top - containerRect.top;
-            const maxX = Math.max(20, hopperRect.width - BALL_SIZE - 12);
-            const maxY = Math.max(20, hopperRect.height - BALL_SIZE - 12);
-
-            balls.forEach(ballObj => {
-                if (ballObj.landed && ballObj.slotIndex !== null) {
-                    const gridId = ballObj.destination === 'G' ? 'grid-geigers' : ballObj.destination === 'K' ? 'grid-kandlers' : 'grid-maglios';
-                    const slots = document.getElementById(gridId).getElementsByClassName('slot-cell');
-                    const targetSlot = slots[ballObj.slotIndex];
-                    if (targetSlot) {
-                        const slotRect = targetSlot.getBoundingClientRect();
-                        ballObj.element.style.left = `${slotRect.left - containerRect.left + (slotRect.width - BALL_SIZE) / 2}px`;
-                        ballObj.element.style.top = `${slotRect.top - containerRect.top + (slotRect.height - BALL_SIZE) / 2}px`;
-                    }
-                } else {
-                    ballObj.element.style.left = `${offsetLeft + 6 + Math.random() * maxX}px`;
-                    ballObj.element.style.top = `${offsetTop + 6 + Math.random() * maxY}px`;
-                }
-            });
-        }
-
-        // Initialize on load and handle responsive resize
+        // Initialize on load and handle responsive resize (docked balls auto-align via CSS!)
         window.onload = () => {
-            resetAndInitHopper();
+            resetAndInitHopper(false);
         };
 
         window.onresize = () => {
-            if (drawState !== 'drawing') {
-                repositionBallsOnResize();
+            if (drawState === 'idle') {
+                scatterBallsInHopper();
             }
         };
     </script>
