@@ -237,11 +237,7 @@
     <!-- JavaScript Application Logic -->
     <script>
         // Exact deterministic assignment order for balls 1 through 24
-        const ASSIGNMENT_ORDER = [
-            'G', 'K', 'G', 'M', 'G', 'K', 'M', 'G', 
-            'M', 'K', 'G', 'K', 'M', 'K', 'G', 'K', 
-            'M', 'G', 'M', 'K', 'G', 'M', 'K', 'M'
-        ];
+        const ASSIGNMENT_ORDER = ['M', 'G', 'M', 'K', 'G', 'M', 'G', 'K', 'M', 'G', 'K', 'G', 'K', 'M', 'G', 'K', 'M', 'K', 'G', 'M', 'G', 'K', 'M', 'K'];
         const DEST_NAMES = { 'G': 'Geigers', 'K': 'Kandlers', 'M': 'Maglios' };
         const TOTAL_BALLS = ASSIGNMENT_ORDER.length; // 24
         const BALL_SIZE = 34;
