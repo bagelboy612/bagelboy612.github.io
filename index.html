@@ -1,222 +1,565 @@
 <!DOCTYPE html>
-<html>
-
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Advent Beer 2025 B</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geiger Family Beer Advent Calendar</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 50% 20%, #1e1b4b, #0f172a, #020617);
+            color: #f8fafc;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-  <style>
-    /* Destination dimensions adjusted to hold 8 balls (4x2 grid) */
-.destination {
-  position: absolute;
-  /* (4 balls * 30px width) + (5 spaces * 5px spacing) approx */
-  width: 170px; 
-  /* (2 rows * 30px height) + (3 spaces * 5px spacing) approx */
-  height: 85px; 
-  border: 2px solid green;
-  border-radius: 5px; /* Change to square/rectangle */
-  padding-top: 5px;   /* Add padding for text */
-  text-align: center;
-  font-weight: bold;
-  line-height: normal;
-  font-size: 14px;
-}
+        /* 3D Glossy Lottery Ball Styling */
+        .ball {
+            position: absolute;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 13px;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+            /* 3D sphere gradient with specular highlight */
+            background: radial-gradient(circle at 30% 28%, #ff7b7b 0%, #ef4444 38%, #991b1b 100%);
+            box-shadow: 
+                inset -4px -4px 8px rgba(0, 0, 0, 0.65),
+                inset 2px 2px 4px rgba(255, 255, 255, 0.55),
+                0 6px 12px rgba(0, 0, 0, 0.55);
+            z-index: 100;
+            user-select: none;
+            pointer-events: none;
+            will-change: left, top, transform;
+        }
 
-/* CSS for the button */
-#start-button {
-  margin-bottom: 20px;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-}
+        /* Specular gloss dot for extra 3D depth */
+        .ball::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 7px;
+            width: 8px;
+            height: 5px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: rotate(-30deg);
+        }
 
-.tank {
-  position: absolute;
-  margin-left: 75px;
-  margin-top: 0px;
-  height: 200px;
-  width: 200px;
-  border-radius: 50%;
-  border: solid;
-  display: inline-block;
-}
+        /* Destination specific ball accents upon landing */
+        .ball.landed-G {
+            background: radial-gradient(circle at 30% 28%, #7dd3fc 0%, #0284c7 40%, #075985 100%);
+        }
+        .ball.landed-K {
+            background: radial-gradient(circle at 30% 28%, #6ee7b7 0%, #059669 40%, #065f46 100%);
+        }
+        .ball.landed-M {
+            background: radial-gradient(circle at 30% 28%, #f9a8d4 0%, #db2777 40%, #9d174d 100%);
+        }
 
-/* Update the ball style for better appearance and centering control */
-.ball {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  background-color: transparent; /* Make the ball content area clear */
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  font-size: 14px;
-  font-weight: bold;
-  
-  /* Use a pseudo-element for the colored circle background */
-  transition: all 1s ease-in-out; 
-  z-index: 10;
-}
+        /* Hopper Glass Container styling */
+        .hopper-glass {
+            background: radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.08) 0%, rgba(15, 23, 42, 0.55) 75%);
+            border: 2px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), inset 0 0 28px rgba(255, 255, 255, 0.06);
+        }
 
-/* Add the actual circle appearance behind the number */
-.ball::before {
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background-color: green; /* Initial color */
-    border-radius: 50%;
-    z-index: -1; /* Place it behind the number */
-    transition: background-color 1s;
-}
+        /* Subtle glass dome sheen overlay */
+        .hopper-sheen {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 45%, transparent 60%);
+            pointer-events: none;
+            z-index: 150;
+        }
 
-/* Style for when the ball lands at its destination */
-.ball.landed::before {
-    background-color: red; /* Change color on landing */
-}
+        /* Tumbling animations for Dramatic mode */
+        @keyframes tumble-1 {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            25% { transform: translate(22px, -26px) rotate(90deg) scale(1.06); }
+            50% { transform: translate(-18px, 14px) rotate(180deg) scale(0.95); }
+            75% { transform: translate(26px, 18px) rotate(270deg) scale(1.04); }
+            100% { transform: translate(0, 0) rotate(360deg) scale(1); }
+        }
+        @keyframes tumble-2 {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            33% { transform: translate(-26px, -22px) rotate(-120deg) scale(1.05); }
+            66% { transform: translate(22px, 22px) rotate(-240deg) scale(0.96); }
+            100% { transform: translate(0, 0) rotate(-360deg) scale(1); }
+        }
 
-.pic {
-  position: absolute;
-  height: 250px;
-  width: 250px;
-  margin-left: 30%;
-  margin-top: 5%;
-}
+        .tumbling-1 {
+            animation: tumble-1 0.55s ease-in-out infinite;
+        }
+        .tumbling-2 {
+            animation: tumble-2 0.65s ease-in-out infinite;
+        }
 
-#geigers { top: 350px; left: 50px; }
-#kandlers { top: 350px; left: 300px; } /* Shifted positions */
-#maglios { top: 350px; left: 550px; }
-  </style>
+        /* Destination Slot Placeholder */
+        .slot-cell {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 1.5px dashed rgba(255, 255, 255, 0.15);
+            background: rgba(15, 23, 42, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.22);
+        }
 
-  
+        /* Keep destination cards on a low stacking layer without trapping children */
+        .destination-card {
+            position: relative;
+            z-index: 1;
+            background: rgba(2, 6, 23, 0.72);
+        }
+    </style>
 </head>
-<body>
-  <button id="start-button">Press to Pick</button>
-<img src="https://i.ibb.co/fdKwtQQh/Gemini-Generated-Image-5lf1mz5lf1mz5lf1.png" alt="advent graphic" class='pic' border="0" id='pic'>
-<div id="lottery-container">
-  <div id="starting-bin">...</div>
-  <span id="tank" class="tank"></span>
-  <div id="geigers" class="destination">Chris & Karla</div>
-  <div id="kandlers" class="destination">Brit & Nik</div>
-  <div id="maglios" class="destination">Zach & Tessa</div>
-</div>
+<body class="flex flex-col items-center justify-between min-h-screen p-3 sm:p-6 md:p-8">
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-  const startButton = document.getElementById('start-button');
-  const startingBin = document.getElementById('starting-bin');
-  
-  // --- 1. Define the Fixed Assignment List ---
-  // Ball 1 = G, Ball 2 = K, Ball 3 = G, etc.
-  const ASSIGNMENT_ORDER = [
-    'G', 'K', 'G', 'M', 'G', 'K', 'M', 'G', 
-    'M', 'K', 'G', 'K', 'M', 'K', 'G', 'K', 
-    'M', 'G', 'M', 'K', 'G', 'M', 'K', 'M'
-  ];
-  const totalBalls = ASSIGNMENT_ORDER.length; 
+    <!-- App Header -->
+    <header class="w-full max-w-4xl text-center mb-3 sm:mb-4">
+        <div class="inline-block px-3 py-1 mb-1.5 text-[11px] font-semibold tracking-wider text-indigo-300 uppercase bg-indigo-950/60 rounded-full border border-indigo-500/30">
+            Professional 3D Draw System
+        </div>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-white to-pink-200">
+            QuantumLotto Hopper
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-400 mt-1">Mobile-First Deterministic Lottery Simulator</p>
+    </header>
 
-  // --- 2. Define Destinations & Lookup Map ---
-  const destinations = {
-    'G': document.getElementById('geigers'),
-    'K': document.getElementById('kandlers'),
-    'M': document.getElementById('maglios')
-  };
+    <!-- Main App Container (Positioning context for all 24 balls so z-index works cleanly) -->
+    <main id="app-container" class="w-full max-w-4xl flex flex-col gap-4 sm:gap-6 relative">
 
-  // --- Grid Constants ---
-  const MAX_COLS = 4;
-  const BALL_SIZE = 30;
-  const SPACING = 5;         
-  const UNIT_SIZE = BALL_SIZE + SPACING; // 35px
+        <!-- Top-level Ball Layer strictly above cards & hopper glass -->
+        <div id="balls-layer" class="absolute inset-0 pointer-events-none z-[100]"></div>
 
-  // --- Track the number of balls landed in each destination ---
-  // Reset for each run, used for grid placement
-  const destinationCounts = { 'G': 0, 'K': 0, 'M': 0 }; 
+        <!-- Control Panel -->
+        <div class="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl">
+            
+            <!-- Mode Selector Switch -->
+            <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 w-full sm:w-auto">
+                <button id="mode-fast" onclick="setMode('fast')" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-indigo-600 text-white shadow-md">
+                    ⚡ Fast Mode
+                </button>
+                <button id="mode-dramatic" onclick="setMode('dramatic')" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+                    🌪️ Dramatic Hopper
+                </button>
+            </div>
 
-  // --- A. Create and place balls in the starting bin ---
-  const balls = [];
-  for (let i = 1; i <= totalBalls; i++) {
-    const ball = document.createElement('div');
-    ball.classList.add('ball');
-    ball.textContent = i;
-    ball.id = `ball-${i}`;
-    
-    // Initial random placement inside the bin (this is the only non-deterministic part, 
-    // but it only affects the initial layout, not the final destination or order)
-    const x = Math.random() * 110 + 120;
-    const y = Math.random() * 110 + 120;
-    ball.style.top = `${y}px`;
-    ball.style.left = `${x}px`;
-    startingBin.appendChild(ball);
-    balls.push(ball); 
-  }
+            <!-- Start / Reset Draw Button -->
+            <button id="action-btn" onclick="handleActionClick()" class="w-full sm:w-auto px-7 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-900/40 transform active:scale-95 transition-all flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span>Start Draw</span>
+            </button>
+        </div>
 
-  // --- B. Function to start the deterministic animation ---
-  function startAnimation() {
-    let delay = 0;
+        <!-- Hopper Starting Bin (Glass Globe) -->
+        <div class="relative z-10 w-full h-44 sm:h-52 hopper-glass rounded-3xl flex items-center justify-center p-4">
+            <div class="absolute top-3 left-4 text-[11px] font-semibold tracking-wider text-slate-300 uppercase flex items-center gap-1.5 z-20">
+                <span id="hopper-indicator" class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                <span id="hopper-status">Hopper Ready (24 Balls)</span>
+            </div>
 
-    // Iterate 24 times, where 'i' corresponds to the ball index (0-23)
-    for (let i = 0; i < totalBalls; i++) {
-      
-      // The current ball element (Ball 1 is at index 0, Ball 2 at index 1, etc.)
-      const ball = balls[i]; 
-      
-      // --- Deterministic Assignment ---
-      const assignmentLetter = ASSIGNMENT_ORDER[i];
-      // --- End Deterministic Assignment ---
+            <!-- Current Pick Callout Badge (for Dramatic & Active draws) -->
+            <div id="current-pick-badge" class="hidden absolute top-2.5 right-3 sm:right-4 px-3 py-1 rounded-full bg-slate-900/90 border border-indigo-400/40 text-xs font-bold text-white shadow-md z-20 flex items-center gap-1.5">
+                <span class="text-slate-400 font-medium">Current Pick:</span>
+                <span id="current-pick-text" class="text-amber-300">#1 → Geigers</span>
+            </div>
 
-      const target = destinations[assignmentLetter];
-      const count = destinationCounts[assignmentLetter]; 
+            <!-- Inner bounds reference where balls bounce/scatter -->
+            <div id="hopper-bin" class="relative w-full h-full max-w-lg mx-auto mt-3"></div>
 
-      // Get target's position relative to the main container
-      const targetRect = target.getBoundingClientRect();
-      const containerRect = document.getElementById('lottery-container').getBoundingClientRect();
+            <!-- Subtle glass dome sheen on top -->
+            <div class="hopper-sheen absolute inset-0 rounded-3xl"></div>
+        </div>
 
-      // --- GRID CALCULATIONS (Same logic as before for 4x2 layout) ---
-      const col = count % MAX_COLS; 
-      const row = Math.floor(count / MAX_COLS); 
+        <!-- Destinations Section (Geigers, Kandlers, Maglios) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
+            
+            <!-- Geigers Destination -->
+            <div class="destination-card border border-sky-500/25 rounded-2xl p-3.5 sm:p-4 flex flex-col shadow-lg">
+                <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-800/80">
+                    <span class="font-bold text-sm text-sky-400">Geigers</span>
+                    <span id="count-G" class="text-xs bg-sky-950 text-sky-300 px-2 py-0.5 rounded-full font-mono border border-sky-800/50">0 / 8</span>
+                </div>
+                <!-- 4x2 Grid Slots -->
+                <div id="grid-geigers" class="grid grid-cols-4 gap-2 relative min-h-[78px] p-1 items-center justify-items-center">
+                    <div class="slot-cell">1</div><div class="slot-cell">2</div><div class="slot-cell">3</div><div class="slot-cell">4</div>
+                    <div class="slot-cell">5</div><div class="slot-cell">6</div><div class="slot-cell">7</div><div class="slot-cell">8</div>
+                </div>
+            </div>
 
-      // Calculate the final X position (based on column)
-      const targetLeft = targetRect.left - containerRect.left;
-      const finalX = targetLeft + (col * UNIT_SIZE) + SPACING + 22;
+            <!-- Kandlers Destination -->
+            <div class="destination-card border border-emerald-500/25 rounded-2xl p-3.5 sm:p-4 flex flex-col shadow-lg">
+                <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-800/80">
+                    <span class="font-bold text-sm text-emerald-400">Kandlers</span>
+                    <span id="count-K" class="text-xs bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded-full font-mono border border-emerald-800/50">0 / 8</span>
+                </div>
+                <!-- 4x2 Grid Slots -->
+                <div id="grid-kandlers" class="grid grid-cols-4 gap-2 relative min-h-[78px] p-1 items-center justify-items-center">
+                    <div class="slot-cell">1</div><div class="slot-cell">2</div><div class="slot-cell">3</div><div class="slot-cell">4</div>
+                    <div class="slot-cell">5</div><div class="slot-cell">6</div><div class="slot-cell">7</div><div class="slot-cell">8</div>
+                </div>
+            </div>
 
-      // Calculate the final Y position (based on row)
-      const targetTop = targetRect.top - containerRect.top;
-      const verticalOffset = 30; // Push down past the destination's name text
-      const finalY = targetTop + (row * UNIT_SIZE) + verticalOffset + 67;
+            <!-- Maglios Destination -->
+            <div class="destination-card border border-pink-500/25 rounded-2xl p-3.5 sm:p-4 flex flex-col shadow-lg">
+                <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-800/80">
+                    <span class="font-bold text-sm text-pink-400">Maglios</span>
+                    <span id="count-M" class="text-xs bg-pink-950 text-pink-300 px-2 py-0.5 rounded-full font-mono border border-pink-800/50">0 / 8</span>
+                </div>
+                <!-- 4x2 Grid Slots -->
+                <div id="grid-maglios" class="grid grid-cols-4 gap-2 relative min-h-[78px] p-1 items-center justify-items-center">
+                    <div class="slot-cell">1</div><div class="slot-cell">2</div><div class="slot-cell">3</div><div class="slot-cell">4</div>
+                    <div class="slot-cell">5</div><div class="slot-cell">6</div><div class="slot-cell">7</div><div class="slot-cell">8</div>
+                </div>
+            </div>
 
-      // ----------------------------------------------------
+        </div>
 
-      // Increment the count for the next ball landing here (must happen BEFORE the delay)
-      destinationCounts[assignmentLetter]++;
+    </main>
 
-      // Delay each ball's jump
-      setTimeout(() => {
-        ball.style.transition = 'top 1s, left 1s';
-        ball.style.position = 'absolute';
-        ball.style.top = `${finalY}px`;
-        ball.style.left = `${finalX}px`;
-        ball.classList.add('landed'); // Apply the purple background style
-      }, delay);
+    <!-- Footer Status -->
+    <footer class="mt-5 text-xs text-slate-500 text-center">
+        QuantumLotto Engine &bull; Deterministic 24-Ball Draw Simulator
+    </footer>
 
-      delay += 150; // Staggered release time for the next ball
-    }
-    document.getElementById('start-button').hidden = true;
-    document.getElementById("tank").style.marginTop = "62px";
-    document.getElementById("pic").style.marginLeft = "47.05%";
-    b.hidden = !b.hidden
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Exact deterministic assignment order for balls 1 through 24
+        const ASSIGNMENT_ORDER = [
+            'G', 'K', 'G', 'M', 'G', 'K', 'M', 'G', 
+            'M', 'K', 'G', 'K', 'M', 'K', 'G', 'K', 
+            'M', 'G', 'M', 'K', 'G', 'M', 'K', 'M'
+        ];
+        const DEST_NAMES = { 'G': 'Geigers', 'K': 'Kandlers', 'M': 'Maglios' };
+        const TOTAL_BALLS = ASSIGNMENT_ORDER.length; // 24
+        const BALL_SIZE = 34;
 
-  }
+        let currentMode = 'fast'; // 'fast' or 'dramatic'
+        let drawState = 'idle';   // 'idle' | 'drawing' | 'completed'
+        let balls = [];
 
-  // Start the animation after a short pause
-  // setTimeout(startAnimation, 1000); 
+        // Active timer & animation registries so Reset cancels 100% of pending activity
+        let activeTimeouts = [];
+        let activeIntervals = [];
+        let activeRAFs = [];
 
-  // --- 4. Event Listener for Start/Restart ---
-    startButton.addEventListener('click', startAnimation);
-});
-  </script>
+        function registerTimeout(fn, delay) {
+            const id = setTimeout(fn, delay);
+            activeTimeouts.push(id);
+            return id;
+        }
+
+        function registerInterval(fn, delay) {
+            const id = setInterval(fn, delay);
+            activeIntervals.push(id);
+            return id;
+        }
+
+        function clearAllTimers() {
+            activeTimeouts.forEach(id => clearTimeout(id));
+            activeTimeouts = [];
+            activeIntervals.forEach(id => clearInterval(id));
+            activeIntervals = [];
+            activeRAFs.forEach(id => cancelAnimationFrame(id));
+            activeRAFs = [];
+        }
+
+        // Update primary action button appearance
+        function updateActionButton(state) {
+            const actionBtn = document.getElementById('action-btn');
+            if (state === 'idle') {
+                actionBtn.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Start Draw</span>
+                `;
+                actionBtn.className = "w-full sm:w-auto px-7 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-900/40 transform active:scale-95 transition-all flex items-center justify-center gap-2";
+            } else {
+                actionBtn.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <span>Reset Draw</span>
+                `;
+                actionBtn.className = "w-full sm:w-auto px-7 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-amber-900/40 transform active:scale-95 transition-all flex items-center justify-center gap-2";
+            }
+        }
+
+        // Mode Selector Handler
+        function setMode(mode) {
+            if (drawState === 'drawing') return;
+            currentMode = mode;
+            const fastBtn = document.getElementById('mode-fast');
+            const dramaticBtn = document.getElementById('mode-dramatic');
+
+            if (mode === 'fast') {
+                fastBtn.className = "flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-indigo-600 text-white shadow-md";
+                dramaticBtn.className = "flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white";
+            } else {
+                dramaticBtn.className = "flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-pink-600 text-white shadow-md";
+                fastBtn.className = "flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white";
+            }
+        }
+
+        // Initialize or Reset Hopper and Balls cleanly
+        function resetAndInitHopper() {
+            clearAllTimers();
+            drawState = 'idle';
+            updateActionButton('idle');
+
+            const ballsLayer = document.getElementById('balls-layer');
+            const hopperBin = document.getElementById('hopper-bin');
+            const containerRect = document.getElementById('app-container').getBoundingClientRect();
+            const hopperRect = hopperBin.getBoundingClientRect();
+
+            // Clear all existing ball elements completely
+            ballsLayer.innerHTML = '';
+            balls = [];
+
+            // Reset UI badges and status
+            ['G', 'K', 'M'].forEach(key => {
+                document.getElementById(`count-${key}`).textContent = `0 / 8`;
+            });
+            document.getElementById('hopper-status').textContent = 'Hopper Ready (24 Balls)';
+            document.getElementById('current-pick-badge').classList.add('hidden');
+
+            // Hopper coordinates relative to #app-container
+            const offsetLeft = hopperRect.left - containerRect.left;
+            const offsetTop = hopperRect.top - containerRect.top;
+            const maxX = Math.max(20, hopperRect.width - BALL_SIZE - 12);
+            const maxY = Math.max(20, hopperRect.height - BALL_SIZE - 12);
+
+            for (let i = 1; i <= TOTAL_BALLS; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'ball';
+                ball.textContent = i;
+                ball.id = `ball-${i}`;
+
+                // Scatter inside hopper bounds
+                const rx = offsetLeft + 6 + Math.random() * maxX;
+                const ry = offsetTop + 6 + Math.random() * maxY;
+
+                ball.style.left = `${rx}px`;
+                ball.style.top = `${ry}px`;
+
+                ballsLayer.appendChild(ball);
+                balls.push({
+                    element: ball,
+                    number: i,
+                    destination: ASSIGNMENT_ORDER[i - 1],
+                    landed: false,
+                    slotIndex: null
+                });
+            }
+        }
+
+        // Handle Start / Reset Button Click
+        function handleActionClick() {
+            if (drawState === 'idle') {
+                startDraw();
+            } else {
+                // Works identically during active draw or after Fast/Dramatic Mode finishes
+                resetAndInitHopper();
+            }
+        }
+
+        // Start Draw Logic
+        function startDraw() {
+            if (drawState !== 'idle') return;
+            drawState = 'drawing';
+            updateActionButton('drawing');
+
+            if (currentMode === 'fast') {
+                runFastMode();
+            } else {
+                runDramaticMode();
+            }
+        }
+
+        // Animate a single ball along a parabolic arc from current position to destination slot
+        function flyBallToSlot(ballObj, destKey, slotIndex, durationMs) {
+            const containerRect = document.getElementById('app-container').getBoundingClientRect();
+            const gridId = destKey === 'G' ? 'grid-geigers' : destKey === 'K' ? 'grid-kandlers' : 'grid-maglios';
+            const slots = document.getElementById(gridId).getElementsByClassName('slot-cell');
+            const targetSlot = slots[slotIndex];
+            const slotRect = targetSlot.getBoundingClientRect();
+
+            const startX = parseFloat(ballObj.element.style.left) || 0;
+            const startY = parseFloat(ballObj.element.style.top) || 0;
+            const targetX = slotRect.left - containerRect.left + (slotRect.width - BALL_SIZE) / 2;
+            const targetY = slotRect.top - containerRect.top + (slotRect.height - BALL_SIZE) / 2;
+
+            // Arc height peaks above the highest point of the path
+            const arcPeak = Math.min(startY, targetY) - 65;
+            const startTime = performance.now();
+
+            ballObj.landed = true;
+            ballObj.slotIndex = slotIndex;
+            ballObj.element.classList.add(`landed-${destKey}`);
+            ballObj.element.style.zIndex = 120 + ballObj.number;
+
+            function step(now) {
+                if (drawState === 'idle') return; // Abort immediately on reset
+
+                const elapsed = now - startTime;
+                const t = Math.min(1, elapsed / durationMs);
+                // Smooth ease-out cubic
+                const ease = 1 - Math.pow(1 - t, 3);
+
+                const currentX = startX + (targetX - startX) * ease;
+                // Quadratic Bezier curve for parabolic jump arc
+                const currentY = (1 - ease) * (1 - ease) * startY + 2 * (1 - ease) * ease * arcPeak + ease * ease * targetY;
+                const scale = 1 + Math.sin(t * Math.PI) * 0.25;
+
+                ballObj.element.style.left = `${currentX}px`;
+                ballObj.element.style.top = `${currentY}px`;
+                ballObj.element.style.transform = `scale(${scale})`;
+
+                if (t < 1) {
+                    const rafId = requestAnimationFrame(step);
+                    activeRAFs.push(rafId);
+                } else {
+                    ballObj.element.style.left = `${targetX}px`;
+                    ballObj.element.style.top = `${targetY}px`;
+                    ballObj.element.style.transform = 'scale(1)';
+                    ballObj.element.style.zIndex = 100;
+                }
+            }
+
+            const rafId = requestAnimationFrame(step);
+            activeRAFs.push(rafId);
+        }
+
+        // Fast Mode Execution (~130ms interval, ~550ms parabolic arc flight)
+        function runFastMode() {
+            const destinationCounts = { 'G': 0, 'K': 0, 'M': 0 };
+            document.getElementById('hopper-status').textContent = 'Fast Draw in Progress...';
+
+            balls.forEach((ballObj, index) => {
+                registerTimeout(() => {
+                    if (drawState !== 'drawing') return;
+
+                    const destKey = ballObj.destination;
+                    const slotIndex = destinationCounts[destKey];
+                    destinationCounts[destKey]++;
+
+                    document.getElementById(`count-${destKey}`).textContent = `${destinationCounts[destKey]} / 8`;
+                    flyBallToSlot(ballObj, destKey, slotIndex, 550);
+
+                    if (index === TOTAL_BALLS - 1) {
+                        registerTimeout(() => {
+                            if (drawState === 'drawing') {
+                                drawState = 'completed';
+                                document.getElementById('hopper-status').textContent = 'Draw Complete!';
+                            }
+                        }, 580);
+                    }
+                }, index * 130);
+            });
+        }
+
+        // Dramatic Mode Execution (Swirling Hopper Mix + Highlighted Current Pick)
+        function runDramaticMode() {
+            const pickBadge = document.getElementById('current-pick-badge');
+            const pickText = document.getElementById('current-pick-text');
+            document.getElementById('hopper-status').textContent = 'Mixing Balls in Hopper...';
+
+            // Step 1: Swirl and tumble all balls in the hopper
+            balls.forEach((ballObj, idx) => {
+                ballObj.element.classList.add(idx % 2 === 0 ? 'tumbling-1' : 'tumbling-2');
+            });
+
+            // Step 2: After 2.4s mix, pick balls one by one while unpicked balls keep swirling
+            registerTimeout(() => {
+                if (drawState !== 'drawing') return;
+
+                document.getElementById('hopper-status').textContent = 'Drawing Numbers...';
+                pickBadge.classList.remove('hidden');
+
+                const destinationCounts = { 'G': 0, 'K': 0, 'M': 0 };
+                let currentIndex = 0;
+
+                const pickNext = () => {
+                    if (drawState !== 'drawing') return;
+
+                    if (currentIndex >= TOTAL_BALLS) {
+                        registerTimeout(() => {
+                            if (drawState === 'drawing') {
+                                drawState = 'completed';
+                                document.getElementById('hopper-status').textContent = 'Draw Complete!';
+                                pickText.textContent = 'All 24 Placed!';
+                            }
+                        }, 700);
+                        return;
+                    }
+
+                    const ballObj = balls[currentIndex];
+                    // Stop tumbling for the picked ball right as it launches
+                    ballObj.element.classList.remove('tumbling-1', 'tumbling-2');
+
+                    const destKey = ballObj.destination;
+                    const slotIndex = destinationCounts[destKey];
+                    destinationCounts[destKey]++;
+
+                    document.getElementById(`count-${destKey}`).textContent = `${destinationCounts[destKey]} / 8`;
+                    pickText.textContent = `#${ballObj.number} → ${DEST_NAMES[destKey]}`;
+
+                    flyBallToSlot(ballObj, destKey, slotIndex, 700);
+
+                    currentIndex++;
+                    registerTimeout(pickNext, 420);
+                };
+
+                pickNext();
+            }, 2400);
+        }
+
+        // Recalculate ball positions cleanly on mobile/desktop viewport resize
+        function repositionBallsOnResize() {
+            const containerRect = document.getElementById('app-container').getBoundingClientRect();
+            const hopperRect = document.getElementById('hopper-bin').getBoundingClientRect();
+
+            const offsetLeft = hopperRect.left - containerRect.left;
+            const offsetTop = hopperRect.top - containerRect.top;
+            const maxX = Math.max(20, hopperRect.width - BALL_SIZE - 12);
+            const maxY = Math.max(20, hopperRect.height - BALL_SIZE - 12);
+
+            balls.forEach(ballObj => {
+                if (ballObj.landed && ballObj.slotIndex !== null) {
+                    const gridId = ballObj.destination === 'G' ? 'grid-geigers' : ballObj.destination === 'K' ? 'grid-kandlers' : 'grid-maglios';
+                    const slots = document.getElementById(gridId).getElementsByClassName('slot-cell');
+                    const targetSlot = slots[ballObj.slotIndex];
+                    if (targetSlot) {
+                        const slotRect = targetSlot.getBoundingClientRect();
+                        ballObj.element.style.left = `${slotRect.left - containerRect.left + (slotRect.width - BALL_SIZE) / 2}px`;
+                        ballObj.element.style.top = `${slotRect.top - containerRect.top + (slotRect.height - BALL_SIZE) / 2}px`;
+                    }
+                } else {
+                    ballObj.element.style.left = `${offsetLeft + 6 + Math.random() * maxX}px`;
+                    ballObj.element.style.top = `${offsetTop + 6 + Math.random() * maxY}px`;
+                }
+            });
+        }
+
+        // Initialize on load and handle responsive resize
+        window.onload = () => {
+            resetAndInitHopper();
+        };
+
+        window.onresize = () => {
+            if (drawState !== 'drawing') {
+                repositionBallsOnResize();
+            }
+        };
+    </script>
 </body>
 </html>
